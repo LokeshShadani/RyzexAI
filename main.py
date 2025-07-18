@@ -2,14 +2,14 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import requests
 
-app = Flask(__name__)  # <-- THIS MUST BE BEFORE @app.route
+app = Flask(__name__)
 CORS(app)
 
 chat_history = []
 
 @app.route("/")
 def index():
-    return send_file("index.html")  # Make sure index.html exists in same folder
+    return send_file("index.html")  # Ensure this file exists
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -17,6 +17,7 @@ def chat():
     user_input = data.get("message")
     chat_history.append({"role": "user", "content": user_input})
 
+    # Hardcoded response
     if "who made you" in user_input.lower():
         reply = "I was created by Lokesh Shadani 💡"
         chat_history.append({"role": "assistant", "content": reply})
@@ -29,7 +30,7 @@ def chat():
     }
 
     payload = {
-        "model": "google/gemma-7b-it",  # or any other supported free model
+        "model": "deepseek/deepseek-chat-v3-0324:free",
         "messages": chat_history,
         "temperature": 0.7
     }
