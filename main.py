@@ -1,5 +1,4 @@
-
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import requests
 
@@ -10,7 +9,7 @@ chat_history = []
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return send_file("index.html")  # Serving directly from root folder
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -26,7 +25,7 @@ def chat():
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
-        "Authorization": "Bearer YOUR_GROQ_API_KEY",
+        "Authorization": "Bearer YOUR_API_KEY",
         "Content-Type": "application/json"
     }
 
@@ -39,9 +38,11 @@ def chat():
     try:
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
+
         reply = response.json()["choices"][0]["message"]["content"]
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
+
     except requests.exceptions.RequestException as e:
         return jsonify({"reply": f"❌ Network error: {str(e)}"}), 500
     except KeyError:
