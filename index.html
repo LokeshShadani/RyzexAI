@@ -1,22 +1,163 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ryzex AI</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ryzex - AI Chat</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background-color: #111827;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .message {
+      max-width: 80%;
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      line-height: 1.4;
+    }
+    .user {
+      align-self: flex-end;
+      background-color: #d1fae5;
+    }
+    .bot {
+      align-self: flex-start;
+      background-color: #e5e7eb;
+    }
+    .input-section {
+      display: flex;
+      padding: 1rem;
+      gap: 0.5rem;
+      background: #ffffff;
+      border-top: 1px solid #ddd;
+    }
+    #message-input {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 1rem;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 1rem;
+      cursor: pointer;
+    }
+    #voice-btn {
+      background-color: #60a5fa;
+      color: white;
+    }
+    #send-btn {
+      background-color: #10b981;
+      color: white;
+    }
+    #image-input {
+      display: none;
+    }
+    label[for="image-input"] {
+      background-color: #f59e0b;
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      cursor: pointer;
+    }
+    img.uploaded-image {
+      max-width: 60%;
+      border-radius: 1rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🤖 Ryzex AI</h1>
-    <div id="chat-box"></div>
-    <div class="input-container">
-      <input type="text" id="message" placeholder="Type your message..." />
-      <button onclick="sendMessage()">➤</button>
-      <button onclick="startVoice()">🎤</button>
-    </div>
+  <header>🤖 Ryzex - AI Chat</header>
+  <div id="chat"></div>
+
+  <div class="input-section">
+    <input type="text" id="message-input" placeholder="Type your message..." />
+    <button id="send-btn">Send</button>
+    <button id="voice-btn">🎤</button>
+    <label for="image-input">📷</label>
+    <input type="file" id="image-input" accept="image/*" />
   </div>
-  <script src="/static/script.js"></script>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const imageInput = document.getElementById('image-input');
+
+    function appendMessage(text, sender) {
+      const msg = document.createElement('div');
+      msg.classList.add('message', sender);
+      msg.textContent = text;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function appendImage(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = document.createElement('img');
+        img.src = reader.result;
+        img.classList.add('uploaded-image');
+        chat.appendChild(img);
+        appendMessage('Image uploaded! (Not processed)', 'bot');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    sendBtn.onclick = async () => {
+      const message = input.value.trim();
+      if (!message) return;
+      appendMessage(message, 'user');
+      input.value = '';
+
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      appendMessage(data.reply, 'bot');
+    };
+
+    imageInput.onchange = () => {
+      const file = imageInput.files[0];
+      if (file) appendImage(file);
+    };
+
+    voiceBtn.onclick = () => {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+      };
+
+      recognition.onerror = (e) => alert('Voice error: ' + e.error);
+    };
+  </script>
 </body>
 </html>
