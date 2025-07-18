@@ -25,7 +25,7 @@ def chat():
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
-        "Authorization": "Bearer YOUR_API_KEY",
+        "Authorization": "Bearer gsk_KimAcC9HRQ62Vfhah3KiWGdyb3FYcfbI4V13HFdc65y4f7QxVF",
         "Content-Type": "application/json"
     }
 
