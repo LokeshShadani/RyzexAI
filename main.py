@@ -2,13 +2,20 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import requests
 import base64
+import os
+import speech_recognition as sr
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 CORS(app)
 
-chat_history = []
+# Create upload folders
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
+if not os.path.exists("audio"):
+    os.makedirs("audio")
 
-API_KEY = "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"
+chat_history = []
 
 @app.route("/")
 def index():
@@ -17,7 +24,8 @@ def index():
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
-    user_input = data.get("message")
+    user_input = data.get("message", "")
+
     chat_history.append({"role": "user", "content": user_input})
 
     if "who made you" in user_input.lower():
@@ -27,8 +35,10 @@ def chat():
 
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
+        "Authorization": "Bearer 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",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://ryzexai.onrender.com",
+        "X-Title": "Ryzex AI"
     }
 
     payload = {
@@ -43,42 +53,44 @@ def chat():
         reply = response.json()["choices"][0]["message"]["content"]
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
-
     except requests.exceptions.RequestException as e:
         return jsonify({"reply": f"❌ Network error: {str(e)}"}), 500
     except KeyError:
         return jsonify({"reply": "❌ API Error: Unexpected response format."}), 500
 
-@app.route("/voice", methods=["POST"])
-def voice_input():
-    audio_file = request.files.get("audio")
-    if not audio_file:
-        return jsonify({"reply": "❌ No audio file provided"}), 400
+@app.route("/upload-image", methods=["POST"])
+def upload_image():
+    file = request.files["image"]
+    filename = secure_filename(file.filename)
+    path = os.path.join("uploads", filename)
+    file.save(path)
 
+    with open(path, "rb") as f:
+        img_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+    content = f"User uploaded an image. Base64 content: {img_base64[:100]}..."
+    chat_history.append({"role": "user", "content": content})
+
+    return jsonify({"reply": "📷 Image uploaded and sent to AI!"})
+
+@app.route("/upload-audio", methods=["POST"])
+def upload_audio():
+    file = request.files["audio"]
+    filename = secure_filename(file.filename)
+    path = os.path.join("audio", filename)
+    file.save(path)
+
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(path) as source:
+        audio = recognizer.record(source)
     try:
-        # Whisper API (replace this if you want local Whisper use)
-        files = {"file": (audio_file.filename, audio_file, audio_file.mimetype)}
-        headers = {"Authorization": f"Bearer {API_KEY}"}
-        data = {
-            "model": "whisper-1",
-            "response_format": "json"
-        }
-        whisper_url = "https://api.openai.com/v1/audio/transcriptions"
-
-        r = requests.post(whisper_url, headers=headers, files=files, data=data)
-        transcript = r.json()["text"]
-        return jsonify({"transcript": transcript})
-    except Exception as e:
-        return jsonify({"reply": f"❌ Voice processing failed: {str(e)}"}), 500
-
-@app.route("/image", methods=["POST"])
-def image_upload():
-    image = request.files.get("image")
-    if not image:
-        return jsonify({"reply": "❌ No image uploaded"}), 400
-
-    # This is a placeholder. OpenRouter doesn’t support image input yet.
-    return jsonify({"reply": "🖼️ Image received successfully, but this AI cannot process images yet."})
+        text = recognizer.recognize_google(audio)
+        chat_history.append({"role": "user", "content": f"(Voice): {text}"})
+        return jsonify({"reply": f"🎙️ Recognized voice input: {text}"})
+    except sr.UnknownValueError:
+        return jsonify({"reply": "❌ Could not understand audio"})
+    except sr.RequestError:
+        return jsonify({"reply": "❌ Voice recognition service failed"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
