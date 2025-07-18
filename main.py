@@ -1,30 +1,25 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import requests
+import json
 import base64
 import os
-import speech_recognition as sr
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 CORS(app)
 
-# Create upload folders
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
-if not os.path.exists("audio"):
-    os.makedirs("audio")
-
 chat_history = []
+
+OPENROUTER_API_KEY = "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"
 
 @app.route("/")
 def index():
-    return send_file("index.html")
+    return send_file("index.html")  # Ensure index.html is in the root folder
 
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
-    user_input = data.get("message", "")
+    user_input = data.get("message")
 
     chat_history.append({"role": "user", "content": user_input})
 
@@ -33,9 +28,8 @@ def chat():
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
 
-    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": "Bearer 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",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://ryzexai.onrender.com",
         "X-Title": "Ryzex AI"
@@ -48,49 +42,47 @@ def chat():
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(payload)
+        )
         response.raise_for_status()
         reply = response.json()["choices"][0]["message"]["content"]
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
+
     except requests.exceptions.RequestException as e:
         return jsonify({"reply": f"❌ Network error: {str(e)}"}), 500
     except KeyError:
         return jsonify({"reply": "❌ API Error: Unexpected response format."}), 500
 
-@app.route("/upload-image", methods=["POST"])
-def upload_image():
-    file = request.files["image"]
-    filename = secure_filename(file.filename)
-    path = os.path.join("uploads", filename)
-    file.save(path)
-
-    with open(path, "rb") as f:
-        img_base64 = base64.b64encode(f.read()).decode("utf-8")
-
-    content = f"User uploaded an image. Base64 content: {img_base64[:100]}..."
-    chat_history.append({"role": "user", "content": content})
-
-    return jsonify({"reply": "📷 Image uploaded and sent to AI!"})
-
-@app.route("/upload-audio", methods=["POST"])
+@app.route("/upload/audio", methods=["POST"])
 def upload_audio():
-    file = request.files["audio"]
-    filename = secure_filename(file.filename)
-    path = os.path.join("audio", filename)
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "No audio file provided"}), 400
+
+    # Save audio file temporarily
+    path = "temp_audio.wav"
     file.save(path)
 
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(path) as source:
-        audio = recognizer.record(source)
-    try:
-        text = recognizer.recognize_google(audio)
-        chat_history.append({"role": "user", "content": f"(Voice): {text}"})
-        return jsonify({"reply": f"🎙️ Recognized voice input: {text}"})
-    except sr.UnknownValueError:
-        return jsonify({"reply": "❌ Could not understand audio"})
-    except sr.RequestError:
-        return jsonify({"reply": "❌ Voice recognition service failed"})
+    # Here you can process it with Whisper or other STT library (not shown)
+    return jsonify({"message": "Audio received. Add speech-to-text logic here."})
+
+@app.route("/upload/image", methods=["POST"])
+def upload_image():
+    file = request.files.get("image")
+    if not file:
+        return jsonify({"error": "No image uploaded"}), 400
+
+    # Save or process image if needed
+    file_path = f"uploads/{file.filename}"
+    os.makedirs("uploads", exist_ok=True)
+    file.save(file_path)
+
+    return jsonify({"message": f"Image uploaded: {file.filename}"})
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
