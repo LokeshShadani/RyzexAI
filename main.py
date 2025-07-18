@@ -24,7 +24,7 @@ def chat():
 
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": "Bearer YOUR_API_KEY",
+        "Authorization": "Bearer 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",
         "Content-Type": "application/json"
     }
 
