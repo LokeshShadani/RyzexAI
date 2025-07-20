@@ -1,170 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ryzex - AI Chat</title>
+  <meta charset="UTF‑8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Ryzex AI – Chat • Image • Video • Audio</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f5f5f5;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      background-color: #111827;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    #chat {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    .message {
-      max-width: 80%;
-      padding: 0.75rem 1rem;
-      border-radius: 1rem;
-      line-height: 1.4;
-    }
-    .user {
-      align-self: flex-end;
-      background-color: #d1fae5;
-    }
-    .bot {
-      align-self: flex-start;
-      background-color: #e5e7eb;
-    }
-    .input-section {
-      display: flex;
-      padding: 1rem;
-      gap: 0.5rem;
-      background: #ffffff;
-      border-top: 1px solid #ddd;
-    }
-    #message-input {
-      flex: 1;
-      padding: 0.75rem;
-      border-radius: 1rem;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 0.75rem 1rem;
-      border: none;
-      border-radius: 1rem;
-      cursor: pointer;
-    }
-    #voice-btn {
-      background-color: #60a5fa;
-      color: white;
-    }
-    #send-btn {
-      background-color: #10b981;
-      color: white;
-    }
-    #image-input {
-      display: none;
-    }
-    label[for="image-input"] {
-      background-color: #f59e0b;
-      color: white;
-      padding: 0.75rem 1rem;
-      border-radius: 1rem;
-      cursor: pointer;
-    }
-    img.uploaded-image {
-      max-width: 60%;
-      border-radius: 1rem;
-    }
+    body { font-family:'Segoe UI'; padding:20px; }
+    .section { margin-bottom:30px; }
+    button { padding:10px 20px; cursor:pointer; }
+    img, video { max-width:100%; margin-top:15px; }
   </style>
 </head>
 <body>
-  <header>🤖 Ryzex - AI Chat</header>
-  <div id="chat"></div>
+  <h1>🤖 Ryzex AI</h1>
 
-  <div class="input-section">
-    <input type="text" id="message-input" placeholder="Type your message..." />
-    <button id="send-btn">Send</button>
-    <button id="voice-btn">🎤</button>
-    <label for="image-input">📷</label>
-    <input type="file" id="image-input" accept="image/*" />
+  <div class="section">
+    <h2>Chat with AI</h2>
+    <input id="chatIn" placeholder="Say something..." size="50"/>
+    <button onclick="sendChat()">Send</button><br>
+    <div id="chatOut"></div>
+    <button onclick="speakReply()">🔊 Speak Reply</button>
   </div>
 
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('message-input');
-    const sendBtn = document.getElementById('send-btn');
-    const voiceBtn = document.getElementById('voice-btn');
-    const imageInput = document.getElementById('image-input');
+  <div class="section">
+    <h2>Generate AI Image</h2>
+    <input id="imgPrompt" placeholder="Describe image..."/>
+    <button onclick="genImage()">Create Image</button><br>
+    <img id="imgOut"/>
+  </div>
 
-    function appendMessage(text, sender) {
-      const msg = document.createElement('div');
-      msg.classList.add('message', sender);
-      msg.textContent = text;
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
-    }
+  <div class="section">
+    <h2>Upload Your Image</h2>
+    <input type="file" id="imgUpload"/>
+    <button onclick="uploadImage()">Upload</button><br><span id="uploadMsg"></span>
+  </div>
 
-    function appendImage(file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = document.createElement('img');
-        img.src = reader.result;
-        img.classList.add('uploaded-image');
-        chat.appendChild(img);
-        appendMessage('Image uploaded! (Not processed)', 'bot');
-      };
-      reader.readAsDataURL(file);
-    }
+  <div class="section">
+    <h2>Text → Video (short clip)</h2>
+    <input id="videoPrompt" placeholder="Describe scene..."/>
+    <button onclick="genVideo()">Create Video</button><br>
+    <video id="vidOut" controls loop/>
+  </div>
 
-    async function askRyzex(message) {
-      appendMessage(message, 'user');
-      try {
-        const res = await fetch('/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
-        });
-        const data = await res.json();
-        appendMessage(data.reply, 'bot');
-      } catch (err) {
-        appendMessage('❌ Failed to connect to Ryzex.', 'bot');
-      }
-    }
+<script>
+  let lastReply = "";
 
-    sendBtn.onclick = () => {
-      const message = input.value.trim();
-      if (!message) return;
-      input.value = '';
-      askRyzex(message);
-    };
+  async function sendChat(){
+    const msg = document.getElementById("chatIn").value;
+    let res = await fetch("/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    let j=await res.json(); lastReply=j.reply;
+    document.getElementById("chatOut").innerText = j.reply;
+  }
 
-    imageInput.onchange = () => {
-      const file = imageInput.files[0];
-      if (file) appendImage(file);
-    };
+  function speakReply(){
+    if(!lastReply) return;
+    const ut = new SpeechSynthesisUtterance(lastReply);
+    speechSynthesis.speak(ut);
+  }
 
-    voiceBtn.onclick = () => {
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = 'en-US';
-      recognition.start();
+  async function genImage(){
+    const p = document.getElementById("imgPrompt").value;
+    let res = await fetch("/generate-image",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});
+    let j=await res.json();
+    if(j.image) document.getElementById("imgOut").src = j.image;
+    else alert("Image failed");
+  }
 
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        input.value = transcript;
-      };
+  async function uploadImage(){
+    const f = document.getElementById("imgUpload").files[0];
+    if(!f) return alert("Pick file");
+    let fd=new FormData(); fd.append("image",f);
+    let res=await fetch("/upload/image",{method:"POST",body:fd});
+    let j=await res.json();
+    document.getElementById("uploadMsg").innerText = j.message || j.error;
+  }
 
-      recognition.onerror = (e) => alert('Voice error: ' + e.error);
-    };
-  </script>
+  async function genVideo(){
+    const p = document.getElementById("videoPrompt").value;
+    let res = await fetch("/generate-video",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});
+    let j=await res.json();
+    if(j.video) document.getElementById("vidOut").src = j.video;
+    else alert("Video failed: "+(j.error||""));
+  }
+</script>
 </body>
 </html>
