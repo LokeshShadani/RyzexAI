@@ -1,81 +1,61 @@
+# main.py
 from flask import Flask, request, jsonify, send_file
-from flask_cors import CORS
-import os
-from openai import OpenAI
+import requests
+import base64
+from io import BytesIO
 
-# ✅ Initialize Flask and CORS
 app = Flask(__name__)
-CORS(app)
 
-# ✅ Chat history memory
-chat_history = []
+# Groq API
+GROQ_API_KEY = "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"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# ✅ Groq Client setup (acts like OpenAI)
-client = OpenAI(
-    api_key="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",
-    base_url="https://api.groq.com/openai/v1"
-)
+# Hugging Face Image Generation API
+HF_API_KEY = "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"
+HF_MODEL = "stabilityai/stable-diffusion-2"
 
-# ✅ Serve frontend
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_input = request.json.get("message", "")
+
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+    payload = {
+        "model": "llama3-70b-8192",
+        "messages": [
+            {"role": "system", "content": "You are Ryzex, a helpful AI assistant."},
+            {"role": "user", "content": user_input}
+        ],
+        "temperature": 0.7
+    }
+
+    response = requests.post(GROQ_URL, headers=headers, json=payload)
+    data = response.json()
+    reply = data['choices'][0]['message']['content']
+    return jsonify({"reply": reply})
+
+
+@app.route("/generate-image", methods=["POST"])
+def generate_image():
+    prompt = request.json.get("prompt", "")
+
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    payload = {"inputs": prompt}
+
+    response = requests.post(
+        f"https://api-inference.huggingface.co/models/{HF_MODEL}",
+        headers=headers, json=payload
+    )
+
+    if response.status_code == 200:
+        img_data = base64.b64encode(response.content).decode("utf-8")
+        return jsonify({"image": f"data:image/png;base64,{img_data}"})
+    else:
+        return jsonify({"error": "Image generation failed."}), 500
+
+
 @app.route("/")
 def index():
     return send_file("index.html")
 
-# ✅ Chat endpoint
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.json
-    user_input = data.get("message")
-
-    if not user_input:
-        return jsonify({"reply": "⚠️ Empty message received."}), 400
-
-    chat_history.append({"role": "user", "content": user_input})
-
-    # Hardcoded answer for creator
-    if "who made you" in user_input.lower():
-        reply = "I was created by Lokesh Shadani 💡"
-        chat_history.append({"role": "assistant", "content": reply})
-        return jsonify({"reply": reply})
-
-    try:
-        response = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=chat_history
-        )
-        reply = response.choices[0].message.content.strip()
-        chat_history.append({"role": "assistant", "content": reply})
-        return jsonify({"reply": reply})
-
-    except Exception as e:
-        return jsonify({"reply": f"❌ Error: {str(e)}"}), 500
-
-# ✅ Voice/audio upload (you can connect to speech-to-text here)
-@app.route("/upload/audio", methods=["POST"])
-def upload_audio():
-    file = request.files.get("file")
-    if not file:
-        return jsonify({"error": "No audio file provided"}), 400
-
-    path = "temp_audio.wav"
-    file.save(path)
-
-    return jsonify({"message": "Audio received. (Speech-to-text not implemented yet)"})
-
-
-# ✅ Image upload
-@app.route("/upload/image", methods=["POST"])
-def upload_image():
-    file = request.files.get("image")
-    if not file:
-        return jsonify({"error": "No image uploaded"}), 400
-
-    os.makedirs("uploads", exist_ok=True)
-    file_path = os.path.join("uploads", file.filename)
-    file.save(file_path)
-
-    return jsonify({"message": f"Image uploaded: {file.filename}"})
-
-# ✅ Run the app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
