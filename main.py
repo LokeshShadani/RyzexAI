@@ -2,11 +2,17 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import json
 import os
+import requests
+import openai
 
 app = Flask(__name__)
 CORS(app)
 
 chat_history = []
+
+# Configure Groq API (OpenAI-compatible endpoint)
+openai.api_key = "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"
+openai.api_base = "https://api.groq.com/openai/v1"
 
 @app.route("/")
 def index():
@@ -25,8 +31,12 @@ def chat():
         return jsonify({"reply": reply})
 
     try:
-        # Use Puter SDK on frontend; simulate response backend-side if needed
-        reply = "🧠 Ask me anything! (Response should come from Puter API via frontend JS)"
+        response = openai.ChatCompletion.create(
+            model="llama3-8b-8192",
+            messages=chat_history,
+            temperature=0.7
+        )
+        reply = response.choices[0].message.content
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
 
@@ -55,6 +65,32 @@ def upload_image():
     file.save(file_path)
 
     return jsonify({"message": f"Image uploaded: {file.filename}"})
+
+@app.route("/generate-image", methods=["POST"])
+def generate_image():
+    data = request.json
+    prompt = data.get("prompt")
+
+    if not prompt:
+        return jsonify({"error": "Prompt is required."}), 400
+
+    try:
+        HF_URL = "https://api-inference.huggingface.co/models/CompVis/stable-diffusion-v1-4"
+        headers = {"Accept": "application/json"}
+
+        response = requests.post(HF_URL, headers=headers, json={"inputs": prompt})
+
+        if response.status_code == 200:
+            image_data = response.content
+            image_path = "generated_image.png"
+            with open(image_path, "wb") as f:
+                f.write(image_data)
+            return send_file(image_path, mimetype="image/png")
+        else:
+            return jsonify({"error": f"HuggingFace API error: {response.status_code}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
