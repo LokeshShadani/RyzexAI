@@ -44,7 +44,7 @@ def upload_image():
     os.makedirs("uploads", exist_ok=True)
     path = os.path.join("uploads", f.filename)
     f.save(path)
-    return jsonify({"message": f.image uploaded: {f.filename}"})
+    return jsonify({"message": f"Image uploaded: {f.filename}"})
 
 @app.route("/tts", methods=["POST"])
 def tts():
