@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ryzex - AI Chat</title>
-  <script src="https://cdn.jsdelivr.net/npm/puter-sdk@latest"></script>
   <style>
     body {
       margin: 0;
@@ -107,8 +106,6 @@
     const voiceBtn = document.getElementById('voice-btn');
     const imageInput = document.getElementById('image-input');
 
-    const chatHistory = [];
-
     function appendMessage(text, sender) {
       const msg = document.createElement('div');
       msg.classList.add('message', sender);
@@ -130,23 +127,23 @@
     }
 
     async function askRyzex(message) {
-      chatHistory.push({ role: "user", content: message });
+      appendMessage(message, 'user');
       try {
-        const result = await puter.ai.chat(message, {
-          model: "gpt-4.1-nano",
-          history: chatHistory
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
         });
-        chatHistory.push({ role: "assistant", content: result.text });
-        appendMessage(result.text, 'bot');
-      } catch (e) {
-        appendMessage("❌ Failed to connect to Ryzex.", 'bot');
+        const data = await res.json();
+        appendMessage(data.reply, 'bot');
+      } catch (err) {
+        appendMessage('❌ Failed to connect to Ryzex.', 'bot');
       }
     }
 
     sendBtn.onclick = () => {
       const message = input.value.trim();
       if (!message) return;
-      appendMessage(message, 'user');
       input.value = '';
       askRyzex(message);
     };
