@@ -1,48 +1,56 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-import json
 import os
-import requests
-import openai
+from openai import OpenAI
 
+# ✅ Initialize Flask and CORS
 app = Flask(__name__)
 CORS(app)
 
+# ✅ Chat history memory
 chat_history = []
 
-# Configure Groq API (OpenAI-compatible endpoint)
-openai.api_key = "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"
-openai.api_base = "https://api.groq.com/openai/v1"
+# ✅ Groq Client setup (acts like OpenAI)
+client = OpenAI(
+    api_key="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",
+    base_url="https://api.groq.com/openai/v1"
+)
 
+# ✅ Serve frontend
 @app.route("/")
 def index():
     return send_file("index.html")
 
+# ✅ Chat endpoint
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
     user_input = data.get("message")
 
+    if not user_input:
+        return jsonify({"reply": "⚠️ Empty message received."}), 400
+
     chat_history.append({"role": "user", "content": user_input})
 
+    # Hardcoded answer for creator
     if "who made you" in user_input.lower():
         reply = "I was created by Lokesh Shadani 💡"
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="llama3-8b-8192",
-            messages=chat_history,
-            temperature=0.7
+            messages=chat_history
         )
-        reply = response.choices[0].message.content
+        reply = response.choices[0].message.content.strip()
         chat_history.append({"role": "assistant", "content": reply})
         return jsonify({"reply": reply})
 
     except Exception as e:
         return jsonify({"reply": f"❌ Error: {str(e)}"}), 500
 
+# ✅ Voice/audio upload (you can connect to speech-to-text here)
 @app.route("/upload/audio", methods=["POST"])
 def upload_audio():
     file = request.files.get("file")
@@ -52,45 +60,22 @@ def upload_audio():
     path = "temp_audio.wav"
     file.save(path)
 
-    return jsonify({"message": "Audio received. Add speech-to-text logic here."})
+    return jsonify({"message": "Audio received. (Speech-to-text not implemented yet)"})
 
+
+# ✅ Image upload
 @app.route("/upload/image", methods=["POST"])
 def upload_image():
     file = request.files.get("image")
     if not file:
         return jsonify({"error": "No image uploaded"}), 400
 
-    file_path = f"uploads/{file.filename}"
     os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", file.filename)
     file.save(file_path)
 
     return jsonify({"message": f"Image uploaded: {file.filename}"})
 
-@app.route("/generate-image", methods=["POST"])
-def generate_image():
-    data = request.json
-    prompt = data.get("prompt")
-
-    if not prompt:
-        return jsonify({"error": "Prompt is required."}), 400
-
-    try:
-        HF_URL = "https://api-inference.huggingface.co/models/CompVis/stable-diffusion-v1-4"
-        headers = {"Accept": "application/json"}
-
-        response = requests.post(HF_URL, headers=headers, json={"inputs": prompt})
-
-        if response.status_code == 200:
-            image_data = response.content
-            image_path = "generated_image.png"
-            with open(image_path, "wb") as f:
-                f.write(image_data)
-            return send_file(image_path, mimetype="image/png")
-        else:
-            return jsonify({"error": f"HuggingFace API error: {response.status_code}"}), 500
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+# ✅ Run the app
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
