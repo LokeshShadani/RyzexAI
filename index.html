@@ -1,87 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF‑8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Ryzex AI – Chat • Image • Video • Audio</title>
   <style>
-    body { font-family:'Segoe UI'; padding:20px; }
-    .section { margin-bottom:30px; }
-    button { padding:10px 20px; cursor:pointer; }
-    img, video { max-width:100%; margin-top:15px; }
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px;
+      background: radial-gradient(circle at center, #0f0f0f 0%, #050505 100%);
+      color: #fff;
+      backdrop-filter: blur(8px);
+      overflow-x: hidden;
+    }
+
+    canvas#bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+    }
+
+    h1 {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 50px;
+      color: #00ffe1;
+      text-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 40px;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+      transition: 0.3s ease;
+    }
+
+    .section:hover {
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+    }
+
+    h2 {
+      color: #00ffe1;
+      margin-bottom: 15px;
+      text-shadow: 0 0 5px #00ffe1;
+    }
+
+    input, button {
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: none;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    input {
+      width: 60%;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.1);
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #bbb;
+    }
+
+    button {
+      background: #00ffe1;
+      color: #000;
+      font-weight: bold;
+      box-shadow: 0 0 10px #00ffe1;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #00ccc0;
+      box-shadow: 0 0 20px #00ffe1;
+    }
+
+    img, video {
+      margin-top: 20px;
+      max-width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.2);
+    }
+
+    #chatOut {
+      margin-top: 15px;
+      font-size: 18px;
+      white-space: pre-wrap;
+      color: #fff;
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid #00ffe1;
+      padding: 12px;
+      border-radius: 10px;
+    }
+
+    #uploadMsg {
+      display: block;
+      margin-top: 10px;
+      font-size: 16px;
+      color: #00ffae;
+    }
+
+    ::selection {
+      background: #00ffe1;
+      color: #000;
+    }
   </style>
 </head>
 <body>
-  <h1>🤖 Ryzex AI</h1>
+<canvas id="bg"></canvas>
+<h1>🤖 Ryzex AI</h1>
+<div class="section">
+  <h2>💬 Chat with AI</h2>
+  <input id="chatIn" placeholder="Say something..." />
+  <button onclick="sendChat()">Send</button><br>
+  <div id="chatOut"></div>
+  <button onclick="speakReply()">🔊 Speak Reply</button>
+</div>
 
-  <div class="section">
-    <h2>Chat with AI</h2>
-    <input id="chatIn" placeholder="Say something..." size="50"/>
-    <button onclick="sendChat()">Send</button><br>
-    <div id="chatOut"></div>
-    <button onclick="speakReply()">🔊 Speak Reply</button>
-  </div>
+<div class="section">
+  <h2>🎨 Generate AI Image</h2>
+  <input id="imgPrompt" placeholder="Describe image..."/>
+  <button onclick="genImage()">Create Image</button><br>
+  <img id="imgOut"/>
+</div>
 
-  <div class="section">
-    <h2>Generate AI Image</h2>
-    <input id="imgPrompt" placeholder="Describe image..."/>
-    <button onclick="genImage()">Create Image</button><br>
-    <img id="imgOut"/>
-  </div>
+<div class="section">
+  <h2>📤 Upload Your Image</h2>
+  <input type="file" id="imgUpload"/>
+  <button onclick="uploadImage()">Upload</button><br><span id="uploadMsg"></span>
+</div>
 
-  <div class="section">
-    <h2>Upload Your Image</h2>
-    <input type="file" id="imgUpload"/>
-    <button onclick="uploadImage()">Upload</button><br><span id="uploadMsg"></span>
-  </div>
-
-  <div class="section">
-    <h2>Text → Video (short clip)</h2>
-    <input id="videoPrompt" placeholder="Describe scene..."/>
-    <button onclick="genVideo()">Create Video</button><br>
-    <video id="vidOut" controls loop/>
-  </div>
+<div class="section">
+  <h2>🎥 Text → Video (short clip)</h2>
+  <input id="videoPrompt" placeholder="Describe scene..."/>
+  <button onclick="genVideo()">Create Video</button><br>
+  <video id="vidOut" controls loop/>
+</div>
 
 <script>
-  let lastReply = "";
+let lastReply = "";
 
-  async function sendChat(){
-    const msg = document.getElementById("chatIn").value;
-    let res = await fetch("/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
-    let j=await res.json(); lastReply=j.reply;
-    document.getElementById("chatOut").innerText = j.reply;
-  }
+async function sendChat(){
+  const msg = document.getElementById("chatIn").value;
+  let res = await fetch("/chat", {
+    method: "POST",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg })
+  });
+  let j = await res.json();
+  lastReply = j.reply;
+  document.getElementById("chatOut").innerText = j.reply;
+  saveToLocalChatHistory(msg, j.reply);
+}
 
-  function speakReply(){
-    if(!lastReply) return;
-    const ut = new SpeechSynthesisUtterance(lastReply);
-    speechSynthesis.speak(ut);
-  }
+function speakReply(){
+  if (!lastReply) return;
+  const ut = new SpeechSynthesisUtterance(lastReply);
+  speechSynthesis.speak(ut);
+}
 
-  async function genImage(){
-    const p = document.getElementById("imgPrompt").value;
-    let res = await fetch("/generate-image",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});
-    let j=await res.json();
-    if(j.image) document.getElementById("imgOut").src = j.image;
-    else alert("Image failed");
-  }
+async function genImage(){
+  const p = document.getElementById("imgPrompt").value;
+  let res = await fetch("/generate-image", {
+    method: "POST",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: p })
+  });
+  let j = await res.json();
+  if (j.image) document.getElementById("imgOut").src = j.image;
+  else alert("Image failed");
+}
 
-  async function uploadImage(){
-    const f = document.getElementById("imgUpload").files[0];
-    if(!f) return alert("Pick file");
-    let fd=new FormData(); fd.append("image",f);
-    let res=await fetch("/upload/image",{method:"POST",body:fd});
-    let j=await res.json();
-    document.getElementById("uploadMsg").innerText = j.message || j.error;
-  }
+async function uploadImage(){
+  const f = document.getElementById("imgUpload").files[0];
+  if (!f) return alert("Pick file");
+  let fd = new FormData(); fd.append("image", f);
+  let res = await fetch("/upload/image", { method: "POST", body: fd });
+  let j = await res.json();
+  document.getElementById("uploadMsg").innerText = j.message || j.error;
+}
 
-  async function genVideo(){
-    const p = document.getElementById("videoPrompt").value;
-    let res = await fetch("/generate-video",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});
-    let j=await res.json();
-    if(j.video) document.getElementById("vidOut").src = j.video;
-    else alert("Video failed: "+(j.error||""));
+async function genVideo(){
+  const p = document.getElementById("videoPrompt").value;
+  let res = await fetch("/generate-video", {
+    method: "POST",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: p })
+  });
+  let j = await res.json();
+  if (j.video) document.getElementById("vidOut").src = j.video;
+  else alert("Video failed: " + (j.error || ""));
+}
+
+function saveToLocalChatHistory(user, reply){
+  let history = JSON.parse(localStorage.getItem("ryzex_history") || "[]");
+  history.push({ user, reply });
+  if(history.length > 50) history.shift();
+  localStorage.setItem("ryzex_history", JSON.stringify(history));
+}
+
+function loadChatHistory(){
+  let history = JSON.parse(localStorage.getItem("ryzex_history") || "[]");
+  const out = document.getElementById("chatOut");
+  out.innerHTML = history.map(h => `👤 ${h.user}\n🤖 ${h.reply}`).join("\n\n");
+}
+
+window.onload = () => {
+  loadChatHistory();
+  initBackground();
+};
+
+function initBackground() {
+  const canvas = document.getElementById("bg");
+  const ctx = canvas.getContext("2d");
+  let w = canvas.width = window.innerWidth;
+  let h = canvas.height = window.innerHeight;
+  let stars = Array.from({length: 100}, () => [Math.random()*w, Math.random()*h, Math.random()*1.5+0.5]);
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(0,255,255,0.5)";
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s[0], s[1], s[2], 0, 2*Math.PI);
+      ctx.fill();
+      s[1] += s[2]*0.2;
+      if (s[1] > h) s[1] = 0;
+    });
+    requestAnimationFrame(draw);
   }
+  draw();
+}
 </script>
 </body>
 </html>
