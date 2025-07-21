@@ -1,156 +1,139 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ryzex AI – All-in-One</title>
+  <title>Ryzex AI – Chat • Image • Video • Audio</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f0f4f8;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #111827;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-      font-size: 1.8rem;
-    }
-    .tabs {
-      display: flex;
-      justify-content: center;
-      background: #1f2937;
-    }
-    .tabs button {
-      flex: 1;
-      padding: 1rem;
-      background: none;
-      border: none;
-      color: white;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    .tabs button.active {
-      background: #374151;
-    }
-    .tab-content {
-      display: none;
-      padding: 2rem;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    textarea, input[type="text"] {
-      width: 100%;
-      padding: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    button.submit {
-      background-color: #10b981;
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 1rem;
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 1rem;
-      border-radius: 0.5rem;
-    }
+    body { font-family:'Segoe UI'; margin:0; padding:0; background:#f5f5f5; display:flex; flex-direction:column; height:100vh; }
+    header { background:#111827; color:white; padding:1rem; text-align:center; font-size:1.5rem; font-weight:bold; }
+    nav { display:flex; justify-content:center; gap:10px; padding:10px; background:#e0e7ff; }
+    nav button { padding:10px 20px; border:none; border-radius:20px; background:#6366f1; color:white; cursor:pointer; font-weight:bold; }
+    nav button.active { background:#4338ca; }
+    #container { flex:1; overflow:auto; padding:1rem; display:flex; flex-direction:column; gap:1rem; }
+    .message { max-width:80%; padding:10px 15px; border-radius:15px; line-height:1.5; }
+    .user { align-self:flex-end; background:#d1fae5; }
+    .bot { align-self:flex-start; background:#e5e7eb; }
+    .input-section { display:flex; padding:1rem; gap:0.5rem; background:#ffffff; border-top:1px solid #ddd; }
+    #input { flex:1; padding:0.75rem; border-radius:10px; border:1px solid #ccc; }
+    button { border:none; border-radius:10px; padding:10px 15px; cursor:pointer; }
+    #send-btn { background:#10b981; color:white; }
+    #voice-btn { background:#60a5fa; color:white; }
+    #image-input { display:none; }
+    label[for="image-input"] { background:#f59e0b; color:white; padding:10px 15px; border-radius:10px; cursor:pointer; }
+    img.uploaded-image, video.generated-video { max-width:80%; border-radius:12px; }
   </style>
 </head>
 <body>
-  <header>🤖 Ryzex – Chat, Image, Video, Audio AI</header>
+  <header>🤖 Ryzex AI</header>
+  <nav>
+    <button onclick="selectTool('chat')" id="tool-chat" class="active">💬 Chat</button>
+    <button onclick="selectTool('image')" id="tool-image">🎨 Image</button>
+    <button onclick="selectTool('video')" id="tool-video">🎥 Video</button>
+    <button onclick="selectTool('audio')" id="tool-audio">🔊 Audio</button>
+  </nav>
 
-  <div class="tabs">
-    <button class="tab-link active" onclick="openTab(event, 'chat')">💬 Chat</button>
-    <button class="tab-link" onclick="openTab(event, 'image')">🖼️ Image</button>
-    <button class="tab-link" onclick="openTab(event, 'video')">🎥 Video</button>
-    <button class="tab-link" onclick="openTab(event, 'audio')">🔊 Audio</button>
-  </div>
+  <div id="container"></div>
 
-  <div id="chat" class="tab-content active">
-    <textarea id="chat-input" rows="4" placeholder="Ask Ryzex..."></textarea>
-    <button class="submit" onclick="submitChat()">Send</button>
-    <div id="chat-result"></div>
-  </div>
-
-  <div id="image" class="tab-content">
-    <input type="text" id="image-prompt" placeholder="Describe the image...">
-    <button class="submit" onclick="submitImage()">Generate Image</button>
-    <div id="image-result"></div>
-  </div>
-
-  <div id="video" class="tab-content">
-    <input type="text" id="video-prompt" placeholder="Enter prompt for video...">
-    <button class="submit" onclick="submitVideo()">Generate Video</button>
-    <div id="video-result"></div>
-  </div>
-
-  <div id="audio" class="tab-content">
-    <input type="text" id="audio-prompt" placeholder="Enter text to speak...">
-    <button class="submit" onclick="submitAudio()">Generate Audio</button>
-    <div id="audio-result"></div>
+  <div class="input-section">
+    <input type="text" id="input" placeholder="Type here..." />
+    <button id="send-btn">Send</button>
+    <button id="voice-btn">🎤</button>
+    <label for="image-input">📷</label>
+    <input type="file" id="image-input" accept="image/*" />
   </div>
 
   <script>
-    function openTab(evt, tabName) {
-      document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".tab-link").forEach(t => t.classList.remove("active"));
-      document.getElementById(tabName).classList.add("active");
-      evt.currentTarget.classList.add("active");
+    let tool = "chat";
+    const container = document.getElementById("container");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send-btn");
+    const voiceBtn = document.getElementById("voice-btn");
+    const imageInput = document.getElementById("image-input");
+
+    function selectTool(selected) {
+      tool = selected;
+      document.querySelectorAll("nav button").forEach(btn => btn.classList.remove("active"));
+      document.getElementById("tool-" + selected).classList.add("active");
     }
 
-    async function submitChat() {
-      const input = document.getElementById('chat-input').value;
-      const res = await fetch('/chat', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: input })
-      });
-      const data = await res.json();
-      document.getElementById('chat-result').innerText = data.response;
+    function appendMessage(content, sender) {
+      const div = document.createElement("div");
+      div.classList.add("message", sender);
+      div.textContent = content;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
     }
 
-    async function submitImage() {
-      const input = document.getElementById('image-prompt').value;
-      const res = await fetch('/image', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ prompt: input })
-      });
-      const data = await res.json();
-      document.getElementById('image-result').innerHTML = `<img src="${data.url}" width="300"/>`;
+    function appendImage(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = document.createElement("img");
+        img.src = reader.result;
+        img.classList.add("uploaded-image");
+        container.appendChild(img);
+      };
+      reader.readAsDataURL(file);
     }
 
-    async function submitVideo() {
-      const input = document.getElementById('video-prompt').value;
-      const res = await fetch('/video', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ prompt: input })
-      });
-      const data = await res.json();
-      document.getElementById('video-result').innerHTML = `<video src="${data.url}" controls width="300"></video>`;
+    function appendVideo(blobURL) {
+      const video = document.createElement("video");
+      video.src = blobURL;
+      video.controls = true;
+      video.classList.add("generated-video");
+      container.appendChild(video);
     }
 
-    async function submitAudio() {
-      const input = document.getElementById('audio-prompt').value;
-      const res = await fetch('/audio', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ text: input })
-      });
-      const data = await res.json();
-      document.getElementById('audio-result').innerHTML = `<audio controls src="${data.url}"></audio>`;
+    async function handleSubmit() {
+      const text = input.value.trim();
+      if (!text) return;
+      appendMessage(text, "user");
+      input.value = "";
+
+      if (tool === "chat") {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        appendMessage(data.response, "bot");
+      } else if (tool === "image") {
+        const res = await fetch("/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: text })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        appendImage({ result: url });
+      } else if (tool === "video") {
+        const res = await fetch("/generate-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: text })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        appendVideo(url);
+      }
     }
+
+    sendBtn.onclick = handleSubmit;
+
+    voiceBtn.onclick = () => {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-US";
+      recognition.start();
+      recognition.onresult = e => input.value = e.results[0][0].transcript;
+      recognition.onerror = err => alert("Voice error: " + err.error);
+    };
+
+    imageInput.onchange = () => {
+      const file = imageInput.files[0];
+      if (file) appendImage(file);
+    };
   </script>
 </body>
 </html>
