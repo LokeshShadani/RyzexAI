@@ -1,250 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Ryzex AI – Chat • Image • Video • Audio</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ryzex AI – Multi-Tool AI Assistant</title>
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
-    }
-
     body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9fafb;
       margin: 0;
-      padding: 40px;
-      background: radial-gradient(circle at center, #0f0f0f 0%, #050505 100%);
-      color: #fff;
-      backdrop-filter: blur(8px);
-      overflow-x: hidden;
+      padding: 0;
     }
-
-    canvas#bg {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: -1;
-    }
-
-    h1 {
-      font-size: 3rem;
+    header {
+      background: #111827;
+      color: white;
+      padding: 1rem;
       text-align: center;
-      margin-bottom: 50px;
-      color: #00ffe1;
-      text-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
-    }
-
-    .section {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
-      padding: 30px;
-      margin-bottom: 40px;
-      box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
-      transition: 0.3s ease;
-    }
-
-    .section:hover {
-      box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
-    }
-
-    h2 {
-      color: #00ffe1;
-      margin-bottom: 15px;
-      text-shadow: 0 0 5px #00ffe1;
-    }
-
-    input, button {
-      padding: 12px 18px;
-      border-radius: 10px;
-      border: none;
-      margin-top: 10px;
-      font-size: 16px;
-    }
-
-    input {
-      width: 60%;
-      background: rgba(255,255,255,0.05);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.1);
-      outline: none;
-    }
-
-    input::placeholder {
-      color: #bbb;
-    }
-
-    button {
-      background: #00ffe1;
-      color: #000;
+      font-size: 1.75rem;
       font-weight: bold;
-      box-shadow: 0 0 10px #00ffe1;
+    }
+    .tabs {
+      display: flex;
+      background: #e5e7eb;
+      justify-content: center;
+      gap: 1rem;
+      padding: 0.5rem;
+    }
+    .tab-button {
+      background: #d1d5db;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
       cursor: pointer;
-      transition: 0.3s;
+      font-weight: 600;
     }
-
-    button:hover {
-      background: #00ccc0;
-      box-shadow: 0 0 20px #00ffe1;
+    .tab-button.active {
+      background: #10b981;
+      color: white;
     }
-
-    img, video {
-      margin-top: 20px;
-      max-width: 100%;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0,255,255,0.2);
+    .tab-content {
+      display: none;
+      padding: 1rem;
     }
-
-    #chatOut {
-      margin-top: 15px;
-      font-size: 18px;
-      white-space: pre-wrap;
-      color: #fff;
-      background: rgba(255,255,255,0.03);
-      border-left: 3px solid #00ffe1;
-      padding: 12px;
-      border-radius: 10px;
-    }
-
-    #uploadMsg {
+    .tab-content.active {
       display: block;
-      margin-top: 10px;
-      font-size: 16px;
-      color: #00ffae;
     }
-
-    ::selection {
-      background: #00ffe1;
-      color: #000;
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      margin-top: 1rem;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .response {
+      margin-top: 1rem;
+      background: #e0f2fe;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-<canvas id="bg"></canvas>
-<h1>🤖 Ryzex AI</h1>
-<div class="section">
-  <h2>💬 Chat with AI</h2>
-  <input id="chatIn" placeholder="Say something..." />
-  <button onclick="sendChat()">Send</button><br>
-  <div id="chatOut"></div>
-  <button onclick="speakReply()">🔊 Speak Reply</button>
-</div>
+  <header>🤖 Ryzex AI – Multi-Tool Assistant</header>
+  <div class="tabs">
+    <button class="tab-button active" onclick="switchTab('chat')">Chat</button>
+    <button class="tab-button" onclick="switchTab('image')">Image</button>
+    <button class="tab-button" onclick="switchTab('video')">Video</button>
+    <button class="tab-button" onclick="switchTab('audio')">Audio</button>
+  </div>
 
-<div class="section">
-  <h2>🎨 Generate AI Image</h2>
-  <input id="imgPrompt" placeholder="Describe image..."/>
-  <button onclick="genImage()">Create Image</button><br>
-  <img id="imgOut"/>
-</div>
+  <div id="chat" class="tab-content active">
+    <h2>Chat with Ryzex</h2>
+    <textarea id="chat-input" rows="4" placeholder="Ask me anything..."></textarea>
+    <button onclick="submitChat()">Send</button>
+    <div class="response" id="chat-response"></div>
+  </div>
 
-<div class="section">
-  <h2>📤 Upload Your Image</h2>
-  <input type="file" id="imgUpload"/>
-  <button onclick="uploadImage()">Upload</button><br><span id="uploadMsg"></span>
-</div>
+  <div id="image" class="tab-content">
+    <h2>Generate an Image</h2>
+    <input type="text" id="image-prompt" placeholder="Describe an image..." />
+    <button onclick="generateImage()">Generate Image</button>
+    <div class="response" id="image-response"></div>
+  </div>
 
-<div class="section">
-  <h2>🎥 Text → Video (short clip)</h2>
-  <input id="videoPrompt" placeholder="Describe scene..."/>
-  <button onclick="genVideo()">Create Video</button><br>
-  <video id="vidOut" controls loop/>
-</div>
+  <div id="video" class="tab-content">
+    <h2>Generate a Video</h2>
+    <input type="text" id="video-prompt" placeholder="Describe a video scene..." />
+    <button onclick="generateVideo()">Generate Video</button>
+    <div class="response" id="video-response"></div>
+  </div>
 
-<script>
-let lastReply = "";
+  <div id="audio" class="tab-content">
+    <h2>Text-to-Speech</h2>
+    <input type="text" id="audio-text" placeholder="Text to convert to speech..." />
+    <button onclick="generateAudio()">Generate Audio</button>
+    <div class="response" id="audio-response"></div>
+  </div>
 
-async function sendChat(){
-  const msg = document.getElementById("chatIn").value;
-  let res = await fetch("/chat", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg })
-  });
-  let j = await res.json();
-  lastReply = j.reply;
-  document.getElementById("chatOut").innerText = j.reply;
-  saveToLocalChatHistory(msg, j.reply);
-}
+  <script>
+    function switchTab(id) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
 
-function speakReply(){
-  if (!lastReply) return;
-  const ut = new SpeechSynthesisUtterance(lastReply);
-  speechSynthesis.speak(ut);
-}
+    async function submitChat() {
+      const input = document.getElementById('chat-input').value;
+      const resDiv = document.getElementById('chat-response');
+      resDiv.textContent = '⌛ Waiting for response...';
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: input })
+      });
+      const data = await res.json();
+      resDiv.textContent = data.response;
+    }
 
-async function genImage(){
-  const p = document.getElementById("imgPrompt").value;
-  let res = await fetch("/generate-image", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: p })
-  });
-  let j = await res.json();
-  if (j.image) document.getElementById("imgOut").src = j.image;
-  else alert("Image failed");
-}
+    async function generateImage() {
+      const input = document.getElementById('image-prompt').value;
+      const resDiv = document.getElementById('image-response');
+      resDiv.textContent = '⌛ Generating...';
+      const res = await fetch('/image', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ prompt: input })
+      });
+      const data = await res.json();
+      resDiv.innerHTML = `<img src="${data.image_url}" style="max-width: 100%"/>`;
+    }
 
-async function uploadImage(){
-  const f = document.getElementById("imgUpload").files[0];
-  if (!f) return alert("Pick file");
-  let fd = new FormData(); fd.append("image", f);
-  let res = await fetch("/upload/image", { method: "POST", body: fd });
-  let j = await res.json();
-  document.getElementById("uploadMsg").innerText = j.message || j.error;
-}
+    async function generateVideo() {
+      const input = document.getElementById('video-prompt').value;
+      const resDiv = document.getElementById('video-response');
+      resDiv.textContent = '⌛ Generating video...';
+      const res = await fetch('/video', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ prompt: input })
+      });
+      const data = await res.json();
+      resDiv.innerHTML = `<video controls src="${data.video_url}" style="max-width: 100%"></video>`;
+    }
 
-async function genVideo(){
-  const p = document.getElementById("videoPrompt").value;
-  let res = await fetch("/generate-video", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: p })
-  });
-  let j = await res.json();
-  if (j.video) document.getElementById("vidOut").src = j.video;
-  else alert("Video failed: " + (j.error || ""));
-}
-
-function saveToLocalChatHistory(user, reply){
-  let history = JSON.parse(localStorage.getItem("ryzex_history") || "[]");
-  history.push({ user, reply });
-  if(history.length > 50) history.shift();
-  localStorage.setItem("ryzex_history", JSON.stringify(history));
-}
-
-function loadChatHistory(){
-  let history = JSON.parse(localStorage.getItem("ryzex_history") || "[]");
-  const out = document.getElementById("chatOut");
-  out.innerHTML = history.map(h => `👤 ${h.user}\n🤖 ${h.reply}`).join("\n\n");
-}
-
-window.onload = () => {
-  loadChatHistory();
-  initBackground();
-};
-
-function initBackground() {
-  const canvas = document.getElementById("bg");
-  const ctx = canvas.getContext("2d");
-  let w = canvas.width = window.innerWidth;
-  let h = canvas.height = window.innerHeight;
-  let stars = Array.from({length: 100}, () => [Math.random()*w, Math.random()*h, Math.random()*1.5+0.5]);
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(0,255,255,0.5)";
-    stars.forEach(s => {
-      ctx.beginPath();
-      ctx.arc(s[0], s[1], s[2], 0, 2*Math.PI);
-      ctx.fill();
-      s[1] += s[2]*0.2;
-      if (s[1] > h) s[1] = 0;
-    });
-    requestAnimationFrame(draw);
-  }
-  draw();
-}
-</script>
+    async function generateAudio() {
+      const input = document.getElementById('audio-text').value;
+      const resDiv = document.getElementById('audio-response');
+      resDiv.textContent = '⌛ Generating audio...';
+      const res = await fetch('/audio', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ text: input })
+      });
+      const data = await res.json();
+      resDiv.innerHTML = `<audio controls src="${data.audio_url}"></audio>`;
+    }
+  </script>
 </body>
 </html>
