@@ -1,163 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ryzex AI</title>
+  <meta charset="UTF-8">
+  <title>Ryzex AI – Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * { box-sizing: border-box; }
     body {
-      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #1e1f26;
-      color: #f2f2f2;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      margin: 0;
+      padding: 0;
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
-    header {
-      padding: 20px;
-      background: #2a2b32;
-      text-align: center;
-      font-size: 1.8em;
-      color: #00ffff;
-      font-weight: bold;
-      border-bottom: 1px solid #444;
-    }
-    #chat {
-      flex: 1;
-      padding: 25px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    .msg {
-      padding: 15px 20px;
-      border-radius: 12px;
-      max-width: 70%;
-      line-height: 1.6;
-      white-space: pre-wrap;
-    }
-    .user { align-self: flex-end; background: #0044cc; color: #fff; }
-    .bot { align-self: flex-start; background: #333; color: #00ffcc; }
 
-    form {
+    header {
+      background: #1f1f1f;
+      padding: 16px;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #00ff99;
+      border-bottom: 1px solid #333;
+    }
+
+    #chat-box {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .message {
+      margin-bottom: 16px;
+    }
+
+    .user {
+      color: #00ffff;
+    }
+
+    .bot {
+      color: #ffffff;
+    }
+
+    footer {
       display: flex;
-      background: #292a2f;
-      padding: 10px 20px;
-      border-top: 1px solid #444;
+      padding: 12px;
+      border-top: 1px solid #333;
+      background: #1f1f1f;
     }
+
     input {
-      flex: 1;
-      background: #1e1f26;
+      flex-grow: 1;
+      padding: 12px;
+      border-radius: 6px;
       border: none;
+      margin-right: 10px;
+      background: #333;
       color: #fff;
-      font-size: 1em;
-      padding: 12px 16px;
-      border-radius: 6px;
-      outline: none;
     }
+
     button {
-      margin-left: 10px;
-      background: #00cc99;
-      border: none;
       padding: 12px 20px;
+      background: #00ff99;
+      border: none;
       border-radius: 6px;
-      color: white;
+      color: #000;
       font-weight: bold;
       cursor: pointer;
     }
+
     button:hover {
-      background: #00b386;
+      background: #00dd88;
     }
-
-    .loading {
-      font-style: italic;
-      color: #00ffff;
-    }
-
-    .info {
-      background: #18191f;
-      padding: 20px;
-      margin: 20px;
-      border-radius: 10px;
-      border: 1px solid #333;
-    }
-    .info h2 {
-      color: #ffffff;
-      margin-bottom: 10px;
-    }
-    .info li {
-      margin-bottom: 6px;
-    }
-
   </style>
 </head>
 <body>
+  <header>🤖 Ryzex AI Chatbot</header>
+  <div id="chat-box"></div>
 
-  <header>🤖 Introducing Ryzex – The AI Assistant</header>
-
-  <div class="info">
-    <h2>Why use Ryzex?</h2>
-    <ul>
-      <li>⚡ Instant answers to any question</li>
-      <li>🧠 Smart learning responses</li>
-      <li>🌐 Available 24/7</li>
-      <li>🛠️ Clean user-friendly UI</li>
-    </ul>
-    <p>Say goodbye to endless searching and say hello to Ryzex – your AI companion for anything.</p>
-  </div>
-
-  <main id="chat"></main>
-
-  <form id="form">
-    <input id="input" type="text" placeholder="Type your message here..." autocomplete="off" />
-    <button type="submit">➤</button>
-  </form>
+  <footer>
+    <input type="text" id="user-input" placeholder="Ask me anything...">
+    <button onclick="sendMessage()">Send</button>
+  </footer>
 
   <script>
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const chat = document.getElementById('chat');
+    const chatBox = document.getElementById("chat-box");
+    const input = document.getElementById("user-input");
+    const apiUrl = "https://ryzexai.onrender.com/chat";
     let history = [];
 
-    function appendMessage(role, text) {
-      const msg = document.createElement('div');
-      msg.className = `msg ${role}`;
-      msg.textContent = text;
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
+    function addMessage(sender, text) {
+      const div = document.createElement("div");
+      div.className = "message " + sender;
+      div.innerHTML = `<strong>${sender === "user" ? "You" : "Ryzex"}:</strong> ${text}`;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    async function sendMessage() {
       const text = input.value.trim();
       if (!text) return;
 
-      appendMessage('user', text);
+      addMessage("user", text);
+      input.value = "";
+
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: history })
+      });
+
+      const data = await res.json();
+      const reply = data.reply;
+      addMessage("bot", reply);
+
       history.push({ role: "user", content: text });
-      input.value = '';
+      history.push({ role: "assistant", content: reply });
+    }
 
-      const loading = document.createElement('div');
-      loading.className = 'msg bot loading';
-      loading.textContent = 'Ryzex is thinking...';
-      chat.appendChild(loading);
-
-      try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history })
-        });
-        const data = await res.json();
-        chat.removeChild(loading);
-        appendMessage('bot', data.reply);
-        history.push({ role: "assistant", content: data.reply });
-      } catch (err) {
-        chat.removeChild(loading);
-        appendMessage('bot', "❌ Something went wrong.");
-      }
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") sendMessage();
     });
   </script>
 </body>
