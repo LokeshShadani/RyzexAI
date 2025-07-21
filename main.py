@@ -26,7 +26,7 @@ def chat_with_groq(message, history):
         return res.json()['choices'][0]['message']['content']
     return "Sorry, I couldn't connect to Groq."
 
-# Image generation (via HuggingFace Stable Diffusion)
+# Image generation
 def generate_image(prompt):
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}"
@@ -41,7 +41,7 @@ def generate_image(prompt):
         return response.content
     return None
 
-# DuckDuckGo Web Search (Scraper)
+# DuckDuckGo search
 def duckduckgo_search(query):
     r = requests.get(f"https://lite.duckduckgo.com/lite/?q={query}")
     if '<a rel="nofollow" class="result-link"' in r.text:
@@ -70,5 +70,7 @@ def image():
         return image_bytes, 200, {'Content-Type': 'image/png'}
     return "Image generation failed", 500
 
+# ✅ Important change for Render:
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
