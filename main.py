@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify, send_file
 import requests
 import os
@@ -6,12 +5,12 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-# API Keys
+# API Keys (store securely in production)
 GROQ_API_KEY = "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"
 GROQ_MODEL = "llama3-8b-8192"
 HF_API_KEY = "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"
 
-# Chat (with fallback to DuckDuckGo scraping)
+# Chat with Groq and DuckDuckGo fallback
 def chat_with_groq(message, history):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -46,7 +45,7 @@ def chat():
         response += f"\n\n[DuckDuckGo]: {fallback}"
     return jsonify({"reply": response})
 
-# Image Generation
+# Image Generation (Stable Diffusion 2)
 @app.route("/generate-image", methods=["POST"])
 def generate_image():
     data = request.json
@@ -60,7 +59,7 @@ def generate_image():
         return send_file(BytesIO(response.content), mimetype='image/png')
     return "Image generation failed", 500
 
-# Video Generation from Text (using Zeroscope)
+# Video Generation (Text-to-Video Zeroscope or DAMO)
 @app.route("/generate-video", methods=["POST"])
 def generate_video():
     data = request.json
@@ -75,4 +74,5 @@ def generate_video():
     return "Video generation failed", 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)
