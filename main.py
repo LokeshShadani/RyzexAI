@@ -1,16 +1,17 @@
-# backend.py
-from flask import Flask, request, jsonify
+
+from flask import Flask, request, jsonify, send_file
 import requests
 import os
+from io import BytesIO
 
 app = Flask(__name__)
 
-# Configs
+# API Keys
 GROQ_API_KEY = "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"
 GROQ_MODEL = "llama3-8b-8192"
 HF_API_KEY = "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"
 
-# Chat with Groq
+# Chat (with fallback to DuckDuckGo scraping)
 def chat_with_groq(message, history):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -26,22 +27,6 @@ def chat_with_groq(message, history):
         return res.json()['choices'][0]['message']['content']
     return "Sorry, I couldn't connect to Groq."
 
-# Image generation
-def generate_image(prompt):
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}"
-    }
-    payload = {"inputs": prompt}
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
-        headers=headers,
-        json=payload
-    )
-    if response.status_code == 200:
-        return response.content
-    return None
-
-# DuckDuckGo search
 def duckduckgo_search(query):
     r = requests.get(f"https://lite.duckduckgo.com/lite/?q={query}")
     if '<a rel="nofollow" class="result-link"' in r.text:
@@ -58,19 +43,36 @@ def chat():
     response = chat_with_groq(message, history)
     if "I don't know" in response or "I'm not sure" in response:
         fallback = duckduckgo_search(message)
-        response += f"\n\n[DuckDuckGo result]: {fallback}"
-    return jsonify({"response": response})
+        response += f"\n\n[DuckDuckGo]: {fallback}"
+    return jsonify({"reply": response})
 
+# Image Generation
 @app.route("/generate-image", methods=["POST"])
-def image():
+def generate_image():
     data = request.json
     prompt = data.get("prompt")
-    image_bytes = generate_image(prompt)
-    if image_bytes:
-        return image_bytes, 200, {'Content-Type': 'image/png'}
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    response = requests.post(
+        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
+        headers=headers, json={"inputs": prompt}
+    )
+    if response.status_code == 200:
+        return send_file(BytesIO(response.content), mimetype='image/png')
     return "Image generation failed", 500
 
-# ✅ Important change for Render:
+# Video Generation from Text (using Zeroscope)
+@app.route("/generate-video", methods=["POST"])
+def generate_video():
+    data = request.json
+    prompt = data.get("prompt")
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    response = requests.post(
+        "https://api-inference.huggingface.co/models/damo-vilab/text-to-video-ms-1.7b",
+        headers=headers, json={"inputs": prompt}
+    )
+    if response.status_code == 200:
+        return send_file(BytesIO(response.content), mimetype='video/mp4')
+    return "Video generation failed", 500
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
