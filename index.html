@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ryzex AI – Multi-Tool AI Assistant</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ryzex AI – All-in-One</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f9fafb;
+      background-color: #f0f4f8;
       margin: 0;
       padding: 0;
     }
@@ -16,157 +16,140 @@
       color: white;
       padding: 1rem;
       text-align: center;
-      font-size: 1.75rem;
-      font-weight: bold;
+      font-size: 1.8rem;
     }
     .tabs {
       display: flex;
-      background: #e5e7eb;
       justify-content: center;
-      gap: 1rem;
-      padding: 0.5rem;
+      background: #1f2937;
     }
-    .tab-button {
-      background: #d1d5db;
+    .tabs button {
+      flex: 1;
+      padding: 1rem;
+      background: none;
       border: none;
-      padding: 0.75rem 1.25rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .tab-button.active {
-      background: #10b981;
       color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background: #374151;
     }
     .tab-content {
       display: none;
-      padding: 1rem;
+      padding: 2rem;
     }
     .tab-content.active {
       display: block;
     }
     textarea, input[type="text"] {
       width: 100%;
-      padding: 0.75rem;
-      margin-top: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 1rem;
-    }
-    button {
-      background: #2563eb;
-      color: white;
-      padding: 0.75rem 1.25rem;
-      border: none;
-      border-radius: 8px;
-      margin-top: 1rem;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    .response {
-      margin-top: 1rem;
-      background: #e0f2fe;
       padding: 1rem;
-      border-radius: 8px;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    button.submit {
+      background-color: #10b981;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 1rem;
       white-space: pre-wrap;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 0.5rem;
     }
   </style>
 </head>
 <body>
-  <header>🤖 Ryzex AI – Multi-Tool Assistant</header>
+  <header>🤖 Ryzex – Chat, Image, Video, Audio AI</header>
+
   <div class="tabs">
-    <button class="tab-button active" onclick="switchTab('chat')">Chat</button>
-    <button class="tab-button" onclick="switchTab('image')">Image</button>
-    <button class="tab-button" onclick="switchTab('video')">Video</button>
-    <button class="tab-button" onclick="switchTab('audio')">Audio</button>
+    <button class="tab-link active" onclick="openTab(event, 'chat')">💬 Chat</button>
+    <button class="tab-link" onclick="openTab(event, 'image')">🖼️ Image</button>
+    <button class="tab-link" onclick="openTab(event, 'video')">🎥 Video</button>
+    <button class="tab-link" onclick="openTab(event, 'audio')">🔊 Audio</button>
   </div>
 
   <div id="chat" class="tab-content active">
-    <h2>Chat with Ryzex</h2>
-    <textarea id="chat-input" rows="4" placeholder="Ask me anything..."></textarea>
-    <button onclick="submitChat()">Send</button>
-    <div class="response" id="chat-response"></div>
+    <textarea id="chat-input" rows="4" placeholder="Ask Ryzex..."></textarea>
+    <button class="submit" onclick="submitChat()">Send</button>
+    <div id="chat-result"></div>
   </div>
 
   <div id="image" class="tab-content">
-    <h2>Generate an Image</h2>
-    <input type="text" id="image-prompt" placeholder="Describe an image..." />
-    <button onclick="generateImage()">Generate Image</button>
-    <div class="response" id="image-response"></div>
+    <input type="text" id="image-prompt" placeholder="Describe the image...">
+    <button class="submit" onclick="submitImage()">Generate Image</button>
+    <div id="image-result"></div>
   </div>
 
   <div id="video" class="tab-content">
-    <h2>Generate a Video</h2>
-    <input type="text" id="video-prompt" placeholder="Describe a video scene..." />
-    <button onclick="generateVideo()">Generate Video</button>
-    <div class="response" id="video-response"></div>
+    <input type="text" id="video-prompt" placeholder="Enter prompt for video...">
+    <button class="submit" onclick="submitVideo()">Generate Video</button>
+    <div id="video-result"></div>
   </div>
 
   <div id="audio" class="tab-content">
-    <h2>Text-to-Speech</h2>
-    <input type="text" id="audio-text" placeholder="Text to convert to speech..." />
-    <button onclick="generateAudio()">Generate Audio</button>
-    <div class="response" id="audio-response"></div>
+    <input type="text" id="audio-prompt" placeholder="Enter text to speak...">
+    <button class="submit" onclick="submitAudio()">Generate Audio</button>
+    <div id="audio-result"></div>
   </div>
 
   <script>
-    function switchTab(id) {
-      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-      event.target.classList.add('active');
+    function openTab(evt, tabName) {
+      document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-link").forEach(t => t.classList.remove("active"));
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
     }
 
     async function submitChat() {
       const input = document.getElementById('chat-input').value;
-      const resDiv = document.getElementById('chat-response');
-      resDiv.textContent = '⌛ Waiting for response...';
       const res = await fetch('/chat', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ message: input })
       });
       const data = await res.json();
-      resDiv.textContent = data.response;
+      document.getElementById('chat-result').innerText = data.response;
     }
 
-    async function generateImage() {
+    async function submitImage() {
       const input = document.getElementById('image-prompt').value;
-      const resDiv = document.getElementById('image-response');
-      resDiv.textContent = '⌛ Generating...';
       const res = await fetch('/image', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ prompt: input })
       });
       const data = await res.json();
-      resDiv.innerHTML = `<img src="${data.image_url}" style="max-width: 100%"/>`;
+      document.getElementById('image-result').innerHTML = `<img src="${data.url}" width="300"/>`;
     }
 
-    async function generateVideo() {
+    async function submitVideo() {
       const input = document.getElementById('video-prompt').value;
-      const resDiv = document.getElementById('video-response');
-      resDiv.textContent = '⌛ Generating video...';
       const res = await fetch('/video', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ prompt: input })
       });
       const data = await res.json();
-      resDiv.innerHTML = `<video controls src="${data.video_url}" style="max-width: 100%"></video>`;
+      document.getElementById('video-result').innerHTML = `<video src="${data.url}" controls width="300"></video>`;
     }
 
-    async function generateAudio() {
-      const input = document.getElementById('audio-text').value;
-      const resDiv = document.getElementById('audio-response');
-      resDiv.textContent = '⌛ Generating audio...';
+    async function submitAudio() {
+      const input = document.getElementById('audio-prompt').value;
       const res = await fetch('/audio', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ text: input })
       });
       const data = await res.json();
-      resDiv.innerHTML = `<audio controls src="${data.audio_url}"></audio>`;
+      document.getElementById('audio-result').innerHTML = `<audio controls src="${data.url}"></audio>`;
     }
   </script>
 </body>
