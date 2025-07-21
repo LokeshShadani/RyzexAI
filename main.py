@@ -5,12 +5,17 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-# API Keys (store securely in production)
+# API Keys
 GROQ_API_KEY = "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"
 GROQ_MODEL = "llama3-8b-8192"
 HF_API_KEY = "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"
 
-# Chat with Groq and DuckDuckGo fallback
+# ✅ Root route for Render or base checks
+@app.route("/")
+def index():
+    return "✅ Ryzex AI backend is running!"
+
+# Chat with fallback to DuckDuckGo
 def chat_with_groq(message, history):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -45,7 +50,7 @@ def chat():
         response += f"\n\n[DuckDuckGo]: {fallback}"
     return jsonify({"reply": response})
 
-# Image Generation (Stable Diffusion 2)
+# Image Generation
 @app.route("/generate-image", methods=["POST"])
 def generate_image():
     data = request.json
@@ -59,7 +64,7 @@ def generate_image():
         return send_file(BytesIO(response.content), mimetype='image/png')
     return "Image generation failed", 500
 
-# Video Generation (Text-to-Video Zeroscope or DAMO)
+# Video Generation
 @app.route("/generate-video", methods=["POST"])
 def generate_video():
     data = request.json
@@ -74,5 +79,4 @@ def generate_video():
     return "Video generation failed", 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(debug=True)
